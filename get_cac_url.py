@@ -2,7 +2,6 @@
 import sys
 import subprocess
 import re
-import shlex
 from collections import OrderedDict
 
 PKCS11_URL_PREFIX = 'pkcs11:'
@@ -69,45 +68,51 @@ class Certificate(Pkcs11Object):
         super(Certificate, self).__init__(id, 'Certificate')
 
 
-def _get_p11tool_objects(args, objname, objtype):
-    p = subprocess.Popen(
-            args = ['p11tool'] + args,
-            stdout = subprocess.PIPE)
+class P11Tool(object):
+    def __init__(self):
+        self.p11tool = 'p11tool'
 
-    start_obj_pat = re.compile('^{0} (\d+)'.format(objname))
+    def _get_objects(self, args, objname, objtype):
+        p = subprocess.Popen(
+                args = [self.p11tool] + args,
+                stdout = subprocess.PIPE)
 
-    objects = []
-    curobj = None
-    for line in p.stdout:
-        line = line.strip()
-        if not line: continue
+        start_obj_pat = re.compile('^{0} (\d+)'.format(objname))
 
-        # New object?
-        m = start_obj_pat.match(line)
-        if m:
-            if curobj:
-                objects.append(curobj)
-            curobj = objtype(int(m.group(1)))
-            continue
+        objects = []
+        curobj = None
+        for line in p.stdout:
+            line = line.strip()
+            if not line: continue
 
-        # Nope, keep adding to current object 
-        k,v = line.split(':', 1)
-        v = v.strip()
-        curobj[k] = v
+            # New object?
+            m = start_obj_pat.match(line)
+            if m:
+                if curobj:
+                    objects.append(curobj)
+                curobj = objtype(int(m.group(1)))
+                continue
 
-    if curobj:
-        objects.append(curobj)
+            # Nope, keep adding to current object 
+            k,v = line.split(':', 1)
+            v = v.strip()
+            curobj[k] = v
 
-    return objects
+        if curobj:
+            objects.append(curobj)
+
+        return objects
 
 
-def get_tokens():
-    args = ['--list-tokens']
-    return _get_p11tool_objects(args, 'Token', Token)
+    def get_tokens(self):
+        args = ['--list-tokens']
+        return self._get_objects(args, 'Token', Token)
 
-def get_certs(url):
-    args = ['--list-certs', url]
-    return _get_p11tool_objects(args, 'Object', Certificate)
+    def get_certs(self, url=None):
+        args = ['--list-certs']
+        if url:
+            args.append(url)
+        return self._get_objects(args, 'Object', Certificate)
 
 
 def input_int(prompt):
@@ -120,9 +125,9 @@ def input_int(prompt):
                 print 'Invalid input'
 
 
-def select_token():
+def select_token(p11):
     print 'Finding hardware tokens...'
-    hw_tokens = [t for t in get_tokens() \
+    hw_tokens = [t for t in p11.get_tokens() \
                  if t['type'] == 'Hardware token']
 
     if not hw_tokens:
@@ -147,9 +152,9 @@ def select_token():
             print 'No hardware token by that number'
 
 
-def select_cert(token):
+def select_cert(p11, token):
     print '\nFinding token certificates...'
-    certs = get_certs(token.min_url())
+    certs = p11.get_certs(token.min_url())
 
     if not certs:
         print 'No certificates found on token'
@@ -172,17 +177,21 @@ def select_cert(token):
             print 'No certificate by that number'
 
 def main():
+    p11= P11Tool()
 
-    token = select_token()
+    token = select_token(p11)
     if not token:
         return 1
-    print '\nCAC PKCS11 URL: ', token.min_url()
+    #print '\nCAC PKCS11 URL: ', token.min_url()
 
-
-    cert = select_cert(token)
+    cert = select_cert(p11, token)
     if not cert:
         return 1
-    print '\nCertificate URL: ', cert.get_url(('token','id'))
+    cert_url = cert.get_url(('token','id'))
+    #print '\nCertificate URL: ', cert_url
+
+    print '\n\nUse the following command to start the VPN:'
+    print 'sudo openconnect -c \'{0}\' vpn.example.com'.format(cert_url)
 
     return 0
 
