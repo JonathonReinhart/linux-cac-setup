@@ -1,6 +1,6 @@
 #!/bin/bash
 
-YUM_PKGS="pcsc-lite p11-kit coolkey openconnect"
+yum_pkgs="pcsc-lite p11-kit coolkey openconnect"
 
 # setup colors
 if [ -t 1 ]; then
@@ -23,7 +23,7 @@ if [ $(id -u) != "0" ]; then
 fi
 
 echo -e "\nInstalling packages..."
-yum install -y $YUM_PKGS
+yum install -y $yum_pkgs
 echo "done."
 
 echo -e "\nEnabling pcscd..."
