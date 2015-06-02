@@ -11,7 +11,8 @@ class Token(object):
     def __str__(self):
         s = 'Token {0}:\n'.format(self.id)
         for k,v in self.attrs.iteritems():
-            s += '  {0}: {1}\n'.format(k, v)
+            if v:
+                s += '  {0}: {1}\n'.format(k, v)
         return s
 
     def __getitem__(self, k):
@@ -54,8 +55,20 @@ def get_tokens():
 
     return tokens
 
+def input_int(prompt):
+    while True:
+        res = raw_input(prompt)
+        if res:
+            try:
+                return int(res)
+            except ValueError:
+                print 'Invalid input'
+
+
+
 def main():
    
+    print 'Finding hardware tokens...'
     hw_tokens = [t for t in get_tokens() \
                  if t['type'] == 'Hardware token']
 
@@ -64,10 +77,34 @@ def main():
         print 'Is your reader connected and smart card inserted?'
         return 1
 
-    print 'All hardware tokens (Smart Cards) available to PKCS #11:'
+    print 'Select the hardware token that is your CAC:'
     for t in hw_tokens:
         print t
+
+    while True:
+        tokn = input_int('Token #? ')
+
+        for t in hw_tokens:
+            if t.id == tokn:
+                break
+        else:
+            print 'No hardware token by that number'
+            continue
+        token = t
+        break
+
+    print 'Selected: '
+    print token
+
+
+
     return 0
 
+    
+
 if __name__ == '__main__':
-    sys.exit(main())
+    try:
+        rc = main()
+    except KeyboardInterrupt:
+        rc = 33
+    sys.exit(rc)
