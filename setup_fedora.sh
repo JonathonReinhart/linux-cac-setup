@@ -1,6 +1,8 @@
 #!/bin/bash
 
 yum_pkgs="pcsc-lite p11-kit coolkey openconnect"
+libcoolkey="/usr/lib64/pkcs11/libcoolkeypk11.so"
+coolkey_p11mod="/etc/pkcs11/modules/libcoolkey.module"
 
 # setup colors
 if [ -t 1 ]; then
@@ -29,4 +31,11 @@ echo "done."
 echo -e "\nEnabling pcscd..."
 systemctl enable pcscd
 systemctl start pcscd
+echo "done."
+
+echo -e "\nEnabling libcoolkey pcks11 module..."
+test -f $libcoolkey || error "$libcoolkey missing"
+test -f $coolkey_p11mod && error \
+    "$coolkey_p11mod already exists. Please remove and try again."
+echo "module:$libcoolkey" > $coolkey_p11mod
 echo "done."
