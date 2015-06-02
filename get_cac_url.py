@@ -2,11 +2,14 @@
 import sys
 import subprocess
 import re
+import shlex
+
 
 class Token(object):
     def __init__(self, id):
         self.attrs = {}
         self.id = id
+        self.memo = {}
 
     def __str__(self):
         s = 'Token {0}:\n'.format(self.id)
@@ -24,6 +27,21 @@ class Token(object):
         if k in self.attrs:
             raise ValueError('Key {0} already exists'.format(k))
         self.attrs[k] = v
+
+    def url_dict(self):
+        url = self['url']
+
+        prefix = 'pkcs11:'
+        if not url.startswith(prefix):
+            raise ValueError('Invalid PKCS#11 URL: "{0}"'.format(rl))
+        url = url[len(prefix):]
+
+        def parts(url):
+            for pair in url.split(';'):
+                yield pair.split('=',1)
+
+        return dict(parts(url))
+
 
 
 def get_tokens():
@@ -94,7 +112,7 @@ def main():
         break
 
     print 'Selected: '
-    print token
+    print token.url_dict()
 
 
 
