@@ -16,7 +16,7 @@ class Pkcs11Object(object):
         self.typename = 'Object'
 
     def __str__(self):
-        s = '{1} {0}:\n'.format(self.typename, self.id)
+        s = '{0} {1}:\n'.format(self.typename, self.id)
         for k,v in self.attrs.iteritems():
             if v:
                 s += '  {0}: {1}\n'.format(k, v)
@@ -49,6 +49,11 @@ class Pkcs11Object(object):
     def min_url(self):
         s = ';'.join('{0}={1}'.format(k,v) for k,v in self.url_dict().iteritems() if v)
         return PKCS11_URL_PREFIX + s
+
+    def get_url(self, components):
+        s = ';'.join('{0}={1}'.format(k,v) for k,v in self.url_dict().iteritems() if k in components)
+        return PKCS11_URL_PREFIX + s
+
 
 
 class Token(Pkcs11Object):
@@ -111,9 +116,7 @@ def input_int(prompt):
                 print 'Invalid input'
 
 
-
-def main():
-   
+def select_token():
     print 'Finding hardware tokens...'
     hw_tokens = [t for t in get_tokens() \
                  if t['type'] == 'Hardware token']
@@ -121,36 +124,61 @@ def main():
     if not hw_tokens:
         print 'No hardware tokens found.'
         print 'Is your reader connected and smart card inserted?'
-        return 1
+        return None
 
     if len(hw_tokens) == 1:
-        token = hw_tokens[0]
-    else:
-        print 'Select the hardware token that is your CAC:'
+        return hw_tokens[0]
+
+    print 'Select the hardware token that is your CAC:'
+    for t in hw_tokens:
+        print t
+
+    while True:
+        tokn = input_int('Token #? ')
+
         for t in hw_tokens:
-            print t
+            if t.id == tokn:
+                return t
+        else:
+            print 'No hardware token by that number'
+            return None
 
-        while True:
-            tokn = input_int('Token #? ')
 
-            for t in hw_tokens:
-                if t.id == tokn:
-                    break
-            else:
-                print 'No hardware token by that number'
-                continue
-            token = t
-            break
+def select_cert(token):
+    certs = get_certs(token.min_url())
+    if not certs:
+        print 'No certificates found on token'
+        return 1
 
-    url = token.min_url()
-    print '\nCAC PKCS11 URL: ', url
+    if len(certs) == 1:
+        return certs[0]
 
-    print '\nCAC Certificates:'
-    certs = get_certs(url)
+    print 'Select the certificate to use for VPN authentication:'
     for c in certs:
         print c
 
+    while True:
+        certn = input_int('Certificate #? ')
 
+        for c in certs:
+            if c.id == certn:
+                return c
+        else:
+            print 'No certificate by that number'
+            return None
+
+def main():
+
+    token = select_token()
+    if not token:
+        return 1
+    print '\nCAC PKCS11 URL: ', token.min_url()
+
+
+    cert = select_cert(token)
+    if not cert:
+        return 1
+    print '\nCertificate URL: ', cert.get_url(('token','id'))
 
     return 0
 
