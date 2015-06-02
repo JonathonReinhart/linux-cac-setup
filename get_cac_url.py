@@ -14,10 +14,16 @@ class Token(object):
             s += '  {0}: {1}\n'.format(k, v)
         return s
 
-    def add_attr(self, k, v):
+    def __getitem__(self, k):
+        k = k.lower()
+        return self.attrs[k]
+
+    def __setitem__(self, k, v):
+        k = k.lower()
         if k in self.attrs:
             raise ValueError('Key {0} already exists'.format(k))
         self.attrs[k] = v
+
 
 def get_tokens():
     p = subprocess.Popen(
@@ -33,24 +39,33 @@ def get_tokens():
         # New token?
         m = re.match('^Token (\d+)', line)
         if m:
-            tokens.append(curtok)
+            if curtok:
+                tokens.append(curtok)
             curtok = Token(int(m.group(1)))
             continue
 
         # Nope, keep adding to current token
         k,v = line.split(':', 1)
-        curtok.add_attr(k, v)
+        v = v.strip()
+        curtok[k] = v
 
+    if curtok:
+        tokens.append(curtok)
 
     return tokens
 
-
-        
-        
-
-
 def main():
-    for t in get_tokens():
+   
+    hw_tokens = [t for t in get_tokens() \
+                 if t['type'] == 'Hardware token']
+
+    if not hw_tokens:
+        print 'No hardware tokens found.'
+        print 'Is your reader connected and smart card inserted?'
+        return 1
+
+    print 'All hardware tokens (Smart Cards) available to PKCS #11:'
+    for t in hw_tokens:
         print t
     return 0
 
