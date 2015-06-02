@@ -13,7 +13,7 @@ class Pkcs11Object(object):
         self.attrs = {}
         self.id = id
         self.memo = {}
-        self.typename = 'Object'
+        self.typename = typename
 
     def get_str(self, exclude_attrs=()):
         s = '{0} {1}:\n'.format(self.typename, self.id)
