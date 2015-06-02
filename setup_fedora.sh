@@ -10,7 +10,6 @@ if [ -t 1 ]; then
     COLOR_OFF="\033[0m"
 fi
 
-
 error() {
     local message="$1"
     local exitcode="${2:-2}" # default 2
@@ -18,24 +17,22 @@ error() {
     exit $exitcode
 }
 
-set -e
-
 if [ $(id -u) != "0" ]; then
     error "Must be run as root" 1
 fi
 
 echo -e "\nInstalling packages..."
-yum install -y $yum_pkgs
+yum install -y $yum_pkgs || exit $?
 echo "done."
 
 echo -e "\nEnabling pcscd..."
-systemctl enable pcscd
-systemctl start pcscd
+systemctl enable pcscd || exit $?
+systemctl start  pcscd || exit $?
 echo "done."
 
 echo -e "\nEnabling libcoolkey pcks11 module..."
 test -f $libcoolkey || error "$libcoolkey missing"
 test -f $coolkey_p11mod && error \
     "$coolkey_p11mod already exists. Please remove and try again."
-echo "module:$libcoolkey" > $coolkey_p11mod
+echo "module:$libcoolkey" > $coolkey_p11mod || exit $?
 echo "done."
