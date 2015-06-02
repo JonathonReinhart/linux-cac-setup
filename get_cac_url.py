@@ -129,7 +129,7 @@ def select_token():
     if len(hw_tokens) == 1:
         return hw_tokens[0]
 
-    print 'Select the hardware token that is your CAC:'
+    print '\nSelect the hardware token that is your CAC:'
     for t in hw_tokens:
         print t
 
@@ -141,11 +141,12 @@ def select_token():
                 return t
         else:
             print 'No hardware token by that number'
-            return None
 
 
 def select_cert(token):
+    print '\nFinding token certificates...'
     certs = get_certs(token.min_url())
+
     if not certs:
         print 'No certificates found on token'
         return 1
@@ -153,7 +154,7 @@ def select_cert(token):
     if len(certs) == 1:
         return certs[0]
 
-    print 'Select the certificate to use for VPN authentication:'
+    print '\nSelect the certificate to use for VPN authentication:'
     for c in certs:
         print c
 
@@ -165,7 +166,6 @@ def select_cert(token):
                 return c
         else:
             print 'No certificate by that number'
-            return None
 
 def main():
 
