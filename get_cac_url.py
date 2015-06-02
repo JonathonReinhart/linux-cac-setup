@@ -7,14 +7,16 @@ from collections import OrderedDict
 
 PKCS11_URL_PREFIX = 'pkcs11:'
 
-class Token(object):
-    def __init__(self, id):
+
+class Pkcs11Object(object):
+    def __init__(self, id, typename='Object'):
         self.attrs = {}
         self.id = id
         self.memo = {}
+        self.typename = 'Object'
 
     def __str__(self):
-        s = 'Token {0}:\n'.format(self.id)
+        s = '{1} {0}:\n'.format(self.typename, self.id)
         for k,v in self.attrs.iteritems():
             if v:
                 s += '  {0}: {1}\n'.format(k, v)
@@ -49,43 +51,54 @@ class Token(object):
         return PKCS11_URL_PREFIX + s
 
 
+class Token(Pkcs11Object):
+    def __init__(self, id):
+        super(Token, self).__init__(id, 'Token')
 
-def get_tokens():
+class Certificate(Pkcs11Object):
+    def __init__(self, id):
+        super(Certificate, self).__init__(id, 'Certificate')
+
+
+def _get_p11tool_objects(args, objname, objtype):
     p = subprocess.Popen(
-            args = ['p11tool','--list-tokens'],
+            args = ['p11tool'] + args,
             stdout = subprocess.PIPE)
 
-    tokens = []
-    curtok = None
+    start_obj_pat = re.compile('^{0} (\d+)'.format(objname))
+
+    objects = []
+    curobj = None
     for line in p.stdout:
         line = line.strip()
         if not line: continue
 
-        # New token?
-        m = re.match('^Token (\d+)', line)
+        # New object?
+        m = start_obj_pat.match(line)
         if m:
-            if curtok:
-                tokens.append(curtok)
-            curtok = Token(int(m.group(1)))
+            if curobj:
+                objects.append(curobj)
+            curobj = objtype(int(m.group(1)))
             continue
 
-        # Nope, keep adding to current token
+        # Nope, keep adding to current object 
         k,v = line.split(':', 1)
         v = v.strip()
-        curtok[k] = v
+        curobj[k] = v
 
-    if curtok:
-        tokens.append(curtok)
+    if curobj:
+        objects.append(curobj)
 
-    return tokens
+    return objects
+
+
+def get_tokens():
+    args = ['--list-tokens']
+    return _get_p11tool_objects(args, 'Token', Token)
 
 def get_certs(url):
-    p = subprocess.Popen(
-            args = ['p11tool', '--list-certs', url],
-            stdout = subprocess.PIPE)
-
-    for line in p.stdout:
-        print line,
+    args = ['--list-certs', url]
+    return _get_p11tool_objects(args, 'Object', Certificate)
 
 
 def input_int(prompt):
@@ -133,7 +146,9 @@ def main():
     print '\nCAC PKCS11 URL: ', url
 
     print '\nCAC Certificates:'
-    get_certs(url)
+    certs = get_certs(url)
+    for c in certs:
+        print c
 
 
 
