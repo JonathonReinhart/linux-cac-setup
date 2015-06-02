@@ -3,7 +3,9 @@ import sys
 import subprocess
 import re
 import shlex
+from collections import OrderedDict
 
+PKCS11_URL_PREFIX = 'pkcs11:'
 
 class Token(object):
     def __init__(self, id):
@@ -31,16 +33,20 @@ class Token(object):
     def url_dict(self):
         url = self['url']
 
-        prefix = 'pkcs11:'
-        if not url.startswith(prefix):
+        if not url.startswith(PKCS11_URL_PREFIX):
             raise ValueError('Invalid PKCS#11 URL: "{0}"'.format(rl))
-        url = url[len(prefix):]
+        url = url[len(PKCS11_URL_PREFIX):]
 
         def parts(url):
             for pair in url.split(';'):
                 yield pair.split('=',1)
 
-        return dict(parts(url))
+        # Preserve the original order of the URL
+        return OrderedDict(parts(url))
+
+    def min_url(self):
+        s = ';'.join('{0}={1}'.format(k,v) for k,v in self.url_dict().iteritems() if v)
+        return PKCS11_URL_PREFIX + s
 
 
 
@@ -73,6 +79,15 @@ def get_tokens():
 
     return tokens
 
+def get_certs(url):
+    p = subprocess.Popen(
+            args = ['p11tool', '--list-certs', url],
+            stdout = subprocess.PIPE)
+
+    for line in p.stdout:
+        print line,
+
+
 def input_int(prompt):
     while True:
         res = raw_input(prompt)
@@ -95,24 +110,30 @@ def main():
         print 'Is your reader connected and smart card inserted?'
         return 1
 
-    print 'Select the hardware token that is your CAC:'
-    for t in hw_tokens:
-        print t
-
-    while True:
-        tokn = input_int('Token #? ')
-
+    if len(hw_tokens) == 1:
+        token = hw_tokens[0]
+    else:
+        print 'Select the hardware token that is your CAC:'
         for t in hw_tokens:
-            if t.id == tokn:
-                break
-        else:
-            print 'No hardware token by that number'
-            continue
-        token = t
-        break
+            print t
 
-    print 'Selected: '
-    print token.url_dict()
+        while True:
+            tokn = input_int('Token #? ')
+
+            for t in hw_tokens:
+                if t.id == tokn:
+                    break
+            else:
+                print 'No hardware token by that number'
+                continue
+            token = t
+            break
+
+    url = token.min_url()
+    print '\nCAC PKCS11 URL: ', url
+
+    print '\nCAC Certificates:'
+    get_certs(url)
 
 
 
