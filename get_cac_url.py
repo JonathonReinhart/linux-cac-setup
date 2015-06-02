@@ -15,12 +15,16 @@ class Pkcs11Object(object):
         self.memo = {}
         self.typename = 'Object'
 
-    def __str__(self):
+    def get_str(self, exclude_attrs=()):
         s = '{0} {1}:\n'.format(self.typename, self.id)
         for k,v in self.attrs.iteritems():
-            if v:
-                s += '  {0}: {1}\n'.format(k, v)
+            if k in exclude_attrs: continue
+            if not v: continue
+            s += '  {0}: {1}\n'.format(k, v)
         return s
+
+    def __str__(self):
+        return self.get_str()
 
     def __getitem__(self, k):
         k = k.lower()
@@ -156,7 +160,7 @@ def select_cert(token):
 
     print '\nSelect the certificate to use for VPN authentication:'
     for c in certs:
-        print c
+        print c.get_str(exclude_attrs=('url'))
 
     while True:
         certn = input_int('Certificate #? ')
