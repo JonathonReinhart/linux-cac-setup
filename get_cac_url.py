@@ -190,10 +190,12 @@ def main():
     cert_url = cert.get_url(('token','id'))
     #print '\nCertificate URL: ', cert_url
 
-    print '\n\nUse the following command to start the VPN:'
-    print 'sudo openconnect -c \'{0}\' vpn.example.com'.format(cert_url)
+    args = ['openconnect', '-c', cert_url]
+    args += sys.argv[1:]
 
-    return 0
+    print 'Launching "{0}"'.format(' '.join(args))
+
+    return subprocess.call(args)
 
     
 
