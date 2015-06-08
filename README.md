@@ -15,4 +15,6 @@ When you run this script (as root), it will:
 
 
 ### `openconnect-cac`
-This is a wrapper for `openconnect` which helps select the correct certificate on your CAC for authentication.
+This is a wrapper for `openconnect` which helps select the correct certificate on your CAC for authentication. It requires Python 2.7+
+
+To use it, simply put it somewhere in your `$PATH`, and execute: `openconnect-cac vpn.example.com` (with your VPN URL). It will invoke `p11tool` to find your CAC and allow you to select the appropriate certificate. (In my experience, the "CAC Email Signature Certificate" was the correct one).
